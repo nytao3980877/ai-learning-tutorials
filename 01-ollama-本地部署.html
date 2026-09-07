@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>教程 01｜Ollama 本地部署 Qwen2.5-14B（零成本跑通本地大模型）</title>
+<style>
+*{box-sizing:border-box} body{font-family:-apple-system,"Microsoft YaHei",sans-serif;margin:0;background:#f7f8fa;color:#24292f;line-height:1.7}
+.wrap{max-width:860px;margin:0 auto;padding:24px 20px 80px}
+h1{font-size:26px;border-bottom:2px solid #e1e4e8;padding-bottom:12px;margin:0 0 20px}
+h2{font-size:21px;margin:32px 0 12px;padding-left:10px;border-left:4px solid #0969da}
+h3{font-size:17px;margin:24px 0 10px} h4{font-size:15px;margin:18px 0 8px}
+p{margin:10px 0}
+code{background:#f0f1f3;padding:2px 6px;border-radius:4px;font-family:Consolas,monospace;font-size:13px}
+pre{background:#1f2328;color:#e6edf3;padding:16px;border-radius:8px;overflow-x:auto;font-size:13px;line-height:1.5}
+pre code{background:none;padding:0;color:inherit}
+table{border-collapse:collapse;width:100%;margin:14px 0;background:#fff}
+th,td{border:1px solid #d0d7de;padding:8px 12px;text-align:left;font-size:14px} th{background:#f6f8fa}
+blockquote{border-left:4px solid #d0d7de;margin:14px 0;padding:4px 16px;color:#57606a;background:#f6f8fa;border-radius:0 6px 6px 0}
+ul,ol{padding-left:24px} li{margin:4px 0}
+a{color:#0969da;text-decoration:none} a:hover{text-decoration:underline}
+hr{border:none;border-top:1px solid #e1e4e8;margin:24px 0} .todo{color:#57606a}
+.back{display:inline-block;margin-bottom:16px;font-size:14px}
+</style></head><body><div class="wrap">
+<p class="back"><a href="index.html">← 返回教程目录</a></p>
+<h1>教程 01｜Ollama 本地部署 Qwen2.5-14B（零成本跑通本地大模型）</h1>
+<blockquote>目标：在 &lt;你的服务器IP&gt; 上装好 Ollama，拉取 Qwen2.5-14B，跑通对话和 API<br>耗时：约 40-60 分钟（大部分时间在下载 9GB 模型）<br>难度：入门</blockquote>
+<hr>
+<h2>一、目标（做完这步你得到什么）</h2>
+<ol><li>一台能本地跑大模型的机器（&lt;你的服务器IP&gt;）</li><li>能命令行和 Qwen2.5-14B 对话</li><li>有一个本地 API 端点（<code>http://&lt;你的服务器IP&gt;:11434</code>），后面 LangChain/Agent 直接接它</li></ol>
+<hr>
+<h2>二、原理（动手前先搞懂）</h2>
+<h3>1. Ollama 是什么？</h3>
+<p>Ollama 是一个「本地大模型运行时」，本质是给 <code>llama.cpp</code> 套了个易用外壳。</p>
+<ul><li>没有 Ollama 之前：要自己编译 llama.cpp、下载 GGUF 权重、写一堆参数才能跑模型</li><li>有了 Ollama：<code>ollama pull qwen2.5:14b</code> 一条命令拉模型，<code>ollama run</code> 直接对话</li></ul>
+<h3>2. 为什么选 Ollama 而不是 vLLM / llama.cpp？</h3>
+<table><tr><th>工具</th><th>特点</th><th>适合谁</th></tr><tr><td><strong>Ollama</strong></td><td>最简单，一条命令搞定，自带 API</td><td>入门/开发 ⭐</td></tr><tr><td>llama.cpp</td><td>底层库，CPU 也能跑，要自己编译</td><td>极致性能/嵌入式</td></tr><tr><td>vLLM</td><td>生产级，高吞吐，要 GPU</td><td>公司正式部署</td></tr></table>
+<p>你现在是「学习 + 验证」，选 Ollama 最省事。</p>
+<h3>3. 为什么用 INT4 量化？</h3>
+<ul><li>模型原始权重是 FP16（每个参数 2 字节）：14B 模型要 28GB</li><li>INT4 量化（每个参数 0.5 字节）：14B 模型只要 9GB，<strong>内存占用降到 1/3</strong></li><li>代价：精度略降，但问答场景几乎无感</li><li>Ollama 拉 <code>qwen2.5:14b</code> 默认就是 4-bit 量化（GGUF 格式）</li></ul>
+<h3>4. 为什么 14B 而不是 7B/32B？</h3>
+<p>（回顾上一条对话）这台机器是「强 CPU + 128GB 内存 + 弱 GPU」：</p>
+<ul><li>14B 是 CPU 推理的「效果/速度平衡点」——答得比 7B 好，速度还能接受（4-8 token/s）</li><li>32B 效果好但 CPU 太慢（2-4 token/s）</li></ul>
+<hr>
+<h2>三、前置条件</h2>
+<ul><li>能 SSH 到 &lt;你的服务器IP&gt;（用户 <code>Administrator</code> + 密钥 <code>&lt;你的SSH密钥名&gt;</code>）</li><li>那台机器磁盘空闲 1.5TB（够放 9GB 模型）</li><li>本机有 <code>ssh</code> 命令（Windows 10 自带）</li></ul>
+<hr>
+<h2>四、操作步骤</h2>
+<h3>步骤 1：SSH 连上 &lt;你的服务器IP&gt;</h3>
+<p>在你自己的电脑（Windows）打开 PowerShell，执行：</p>
+<pre><code>ssh -i $env:USERPROFILE\.ssh\&lt;你的SSH密钥名&gt; Administrator@&lt;你的服务器IP&gt;</code></pre>
+<p>看到类似 <code>Administrator@xxx C:\Users\Administrator&gt;</code> 提示符 = 连上了。</p>
+<blockquote>💡 如果不想每次输这串，可以建个 alias。先跑通，后面再优化。</blockquote>
+<h3>步骤 2：下载 Ollama 安装包</h3>
+<p>在<strong>远程机器</strong>（已 SSH 进去）执行，用 PowerShell 下载：</p>
+<pre><code>Invoke-WebRequest -Uri "https://ollama.com/download/OllamaSetup.exe" -OutFile "C:\OllamaSetup.exe"</code></pre>
+<h3>步骤 3：静默安装</h3>
+<pre><code>Start-Process "C:\OllamaSetup.exe" -ArgumentList "/S" -Wait</code></pre>
+<p><code>/S</code> = 静默安装（不弹界面）。装完 Ollama 会注册到系统，默认数据目录 <code>C:\Users\Administrator\.ollama</code>。</p>
+<h3>步骤 4：验证安装</h3>
+<p>新开一个 cmd/powershell（重新加载 PATH）：</p>
+<pre><code>ollama --version</code></pre>
+<p>打印版本号 = 安装成功。</p>
+<h3>步骤 5：配置环境变量（可选但推荐）</h3>
+<p>默认 Ollama 只监听 <code>127.0.0.1:11434</code>（本机）。以后你想从<strong>别的机器</strong>（比如你自己的电脑）调它的 API，需要让它监听所有网卡：</p>
+<pre><code># 设置环境变量（用户级，永久生效）
+[Environment]::SetEnvironmentVariable("OLLAMA_HOST", "0.0.0.0:11434", "User")</code></pre>
+<blockquote>⚠️ 设完后要重启 Ollama 服务才生效（重启机器或重启服务）。这一步先记着，等跑通再配。</blockquote>
+<h3>步骤 6：拉取 Qwen2.5-14B 模型</h3>
+<pre><code>ollama pull qwen2.5:14b</code></pre>
+<ul><li>会下载约 9GB（4-bit 量化 GGUF），时间取决于网速，耐心等</li><li>看到 <code>success</code> = 拉取完成</li></ul>
+<h3>步骤 7：对话测试</h3>
+<pre><code>ollama run qwen2.5:14b</code></pre>
+<p>进入交互对话，输入任意问题（比如「用一句话解释什么是 RAG」），看回复。</p>
+<ul><li>第一次回答前会有「首 token 延迟」几秒，之后逐字输出</li><li>输入 <code>/bye</code> 退出</li></ul>
+<h3>步骤 8：测 API（验证 LangChain 能接）</h3>
+<p>另开一个窗口，执行：</p>
+<pre><code>Invoke-RestMethod -Uri "http://127.0.0.1:11434/api/generate" -Method Post -Body '{"model":"qwen2.5:14b","prompt":"你好","stream":false}' -ContentType "application/json"</code></pre>
+<p>返回 JSON（含 <code>response</code> 字段）= API 通了，后面 LangChain 直接 <code>base_url="http://127.0.0.1:11434"</code> 就能接。</p>
+<hr>
+<h2>五、验收标准（做到这些才算过）</h2>
+<ul><li>[ ] <code>ollama --version</code> 有版本号</li><li>[ ] <code>ollama list</code> 能看到 <code>qwen2.5:14b</code></li><li>[ ] <code>ollama run qwen2.5:14b</code> 能正常问答</li><li>[ ] 步骤 8 的 API 返回 JSON</li><li>[ ] 记下实测速度：一个 100 字的回答大概等了多少秒（截图/记录，方便后面对比）</li></ul>
+<hr>
+<h2>六、常见问题</h2>
+<table><tr><th>问题</th><th>原因</th><th>解决</th></tr><tr><td><code>ollama</code> 不是内部命令</td><td>PATH 没刷新</td><td>重开终端，或手动加 PATH</td></tr><tr><td>下载很慢/中断</td><td>网络问题</td><td>重跑 <code>ollama pull</code>，支持断点续传</td></tr><tr><td>回答特别慢（&gt;1分钟）</td><td>CPU 推理正常现象</td><td>14B CPU 就是这么慢，先跑通再说</td></tr><tr><td>API 连不上</td><td>只监听 127.0.0.1</td><td>配 <code>OLLAMA_HOST=0.0.0.0</code> 后重启</td></tr><tr><td>磁盘空间不足</td><td>模型 9GB + 缓存</td><td>检查 C 盘，确认有 20GB+ 空闲</td></tr></table>
+<hr>
+<h2>七、做完后的下一步</h2>
+<p>跑通后告诉我，我给你<strong>教程 02</strong>。按顺序大概是：</p>
+<ul><li>教程 02：AI 底层原理（Transformer + 注意力，手写 mini demo）</li><li>教程 03：LangChain/LangGraph 入门</li><li>教程 04：RAG 全链路</li><li>教程 05：MCP Server 开发</li><li>教程 06：企业知识库问答 Agent（整合项目，公司落地）</li></ul>
+
+</div></body></html>
