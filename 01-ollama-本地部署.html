@@ -2,8 +2,15 @@
 <html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>教程 01｜Ollama 本地部署 Qwen2.5-14B（零成本跑通本地大模型）</title>
 <style>
-*{box-sizing:border-box} body{font-family:-apple-system,"Microsoft YaHei",sans-serif;margin:0;background:#f7f8fa;color:#24292f;line-height:1.7}
-.wrap{max-width:860px;margin:0 auto;padding:24px 20px 80px}
+*{box-sizing:border-box} body{font-family:-apple-system,"Microsoft YaHei",sans-serif;margin:0;background:#fff;color:#24292f;line-height:1.7}
+.layout{display:flex;min-height:100vh}
+.sidebar{width:260px;flex-shrink:0;background:#f6f8fa;border-right:1px solid #e1e4e8;position:sticky;top:0;height:100vh;overflow-y:auto;padding:20px 0}
+.sidebar .brand{font-size:16px;font-weight:700;padding:0 20px 18px;border-bottom:1px solid #e1e4e8;margin-bottom:10px}
+.sidebar .nav{display:block;padding:9px 20px;color:#24292f;text-decoration:none;font-size:14px;border-left:3px solid transparent;line-height:1.4}
+.sidebar a.nav:hover{background:#eef1f4;text-decoration:none}
+.sidebar .nav.active{background:#e7f0fe;border-left-color:#0969da;color:#0969da;font-weight:600}
+.sidebar .nav.todo{color:#9ca3af}
+.content{flex:1;max-width:880px;padding:28px 44px 100px;min-width:0}
 h1{font-size:26px;border-bottom:2px solid #e1e4e8;padding-bottom:12px;margin:0 0 20px}
 h2{font-size:21px;margin:32px 0 12px;padding-left:10px;border-left:4px solid #0969da}
 h3{font-size:17px;margin:24px 0 10px} h4{font-size:15px;margin:18px 0 8px}
@@ -17,9 +24,10 @@ blockquote{border-left:4px solid #d0d7de;margin:14px 0;padding:4px 16px;color:#5
 ul,ol{padding-left:24px} li{margin:4px 0}
 a{color:#0969da;text-decoration:none} a:hover{text-decoration:underline}
 hr{border:none;border-top:1px solid #e1e4e8;margin:24px 0} .todo{color:#57606a}
-.back{display:inline-block;margin-bottom:16px;font-size:14px}
-</style></head><body><div class="wrap">
-<p class="back"><a href="index.html">← 返回教程目录</a></p>
+@media(max-width:768px){.sidebar{display:none}.content{padding:20px}}
+</style></head><body>
+<div class="sidebar"><div class="brand">📚 AI 学习教程</div><a class="nav" href="index.html">🏠 目录首页</a><a class="nav active" href="01-ollama-本地部署.html">01 Ollama 本地部署 Qwen2.5-14B</a><span class="nav todo">02 AI 底层原理（Transformer/注意力） · 待出</span><span class="nav todo">03 LangChain / LangGraph 入门 · 待出</span><span class="nav todo">04 RAG 全链路 · 待出</span><span class="nav todo">05 MCP Server 开发 · 待出</span><span class="nav todo">06 企业知识库问答 Agent（整合项目） · 待出</span><span class="nav todo">07 分布式爬虫项目（第二阶段） · 待出</span></div>
+<div class="content">
 <h1>教程 01｜Ollama 本地部署 Qwen2.5-14B（零成本跑通本地大模型）</h1>
 <blockquote>目标：在 &lt;你的服务器IP&gt; 上装好 Ollama，拉取 Qwen2.5-14B，跑通对话和 API<br>耗时：约 40-60 分钟（大部分时间在下载 9GB 模型）<br>难度：入门</blockquote>
 <hr>
@@ -85,4 +93,5 @@ hr{border:none;border-top:1px solid #e1e4e8;margin:24px 0} .todo{color:#57606a}
 <p>跑通后告诉我，我给你<strong>教程 02</strong>。按顺序大概是：</p>
 <ul><li>教程 02：AI 底层原理（Transformer + 注意力，手写 mini demo）</li><li>教程 03：LangChain/LangGraph 入门</li><li>教程 04：RAG 全链路</li><li>教程 05：MCP Server 开发</li><li>教程 06：企业知识库问答 Agent（整合项目，公司落地）</li></ul>
 
-</div></body></html>
+</div>
+</body></html>
